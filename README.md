@@ -10,3 +10,7 @@ Focus areas:
 - monitoring-friendly outputs
 
 Status: Initial setup.
+
+## Dataset
+Public insurance cost dataset used for regression demo.
+Raw data stored in data/raw and versioned for reproducibility.
