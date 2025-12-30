@@ -4,6 +4,8 @@ import yaml
 import joblib
 import pandas as pd
 import numpy as np
+import mlflow
+import mlflow.sklearn
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
@@ -50,24 +52,36 @@ def main():
         random_state=config["training"]["random_state"],
     )
 
-    # Train model
-    model = train_model(X_train, y_train, config["model"]["params"])
+    mlflow.set_experiment("insurance_regression")
 
-    # Evaluate
-    metrics = evaluate_model(model, X_test, y_test)
 
-    # Ensure output directories exist
-    os.makedirs(os.path.dirname(config["paths"]["model_output"]), exist_ok=True)
+    with mlflow.start_run():
+        # Log parameters
+        mlflow.log_params(config["model"]["params"])
+        mlflow.log_param("test_size", config["training"]["test_size"])
 
-    # Save model
-    joblib.dump(model, config["paths"]["model_output"])
+        # Train model
+        model = train_model(X_train, y_train, config["model"]["params"])
 
-    # Save metrics
-    with open(config["paths"]["metrics_output"], "w") as f:
-        json.dump(metrics, f, indent=2)
+        # Evaluate
+        metrics = evaluate_model(model, X_test, y_test)
 
-    print("Training complete.")
-    print("Metrics:", metrics)
+        # Log metrics
+        mlflow.log_metrics(metrics)
+
+        # Save model locally
+        os.makedirs(os.path.dirname(config["paths"]["model_output"]), exist_ok=True)
+        joblib.dump(model, config["paths"]["model_output"])
+
+        # Log model to MLflow
+        mlflow.sklearn.log_model(model, artifact_path="model")
+
+        # Save metrics locally as well
+        with open(config["paths"]["metrics_output"], "w") as f:
+            json.dump(metrics, f, indent=2)
+
+        print("Training complete.")
+        print("Metrics:", metrics)
 
 
 if __name__ == "__main__":
